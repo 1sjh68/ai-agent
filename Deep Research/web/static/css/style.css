@@ -1,0 +1,43 @@
+/* 自定义样式 */
+body {
+    font-family: 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+}
+
+.markdown-content {
+    line-height: 1.6;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+    color: #1a202c;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.markdown-content p {
+    margin-bottom: 1rem;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.markdown-content code {
+    background-color: #f7fafc;
+    padding: 0.2em 0.4em;
+    border-radius: 0.25rem;
+    font-family: monospace;
+}
+
+/* 动画效果 */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}

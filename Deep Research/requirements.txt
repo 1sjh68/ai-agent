@@ -1,0 +1,50 @@
+# --- 核心 AI 与模型 ---
+openai>=1.12.0
+tiktoken
+pydantic>=2.0.0
+instructor>=1.0.0
+
+# --- LangGraph 工作流 ---
+langchain
+langchain-core
+langgraph
+
+# --- 向量数据库与 RAG ---
+chromadb>=0.4.22
+thefuzz
+python-Levenshtein
+
+# --- Web 研究与数据抓取 ---
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+requests
+beautifulsoup4
+lxml
+aiohttp
+certifi
+
+# --- 全能文档解析 ---
+python-docx
+python-pptx
+pdf2image
+pytesseract
+Pillow
+
+# --- 文档与文件处理 (原有) ---
+PyMuPDF
+python-dotenv
+
+# --- 健壮性与异步处理 ---
+tenacity
+nest-asyncio
+
+# --- Web UI 界面 ---
+fastapi
+uvicorn
+jinja2
+aiofiles
+
+# --- Google API 依赖 ---
+httplib2
+python-multipart

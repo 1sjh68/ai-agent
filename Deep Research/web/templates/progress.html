@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>写作结果 - 智能AI长文写作框架</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <nav class="bg-blue-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">智能AI长文写作框架</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-blue-200">首页</a>
+                <a href="/configure" class="hover:text-blue-200">配置</a>
+                <a href="/toolkit" class="hover:text-blue-200">开发者工具箱</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow container mx-auto p-4">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6 mt-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">写作结果</h2>
+
+            <div class="mb-4 p-4 bg-blue-50 rounded-md">
+                <p class="text-gray-700"><strong>任务ID:</strong> {{ task_id }}</p>
+                <p class="text-gray-700"><strong>状态:</strong> <span id="status" class="text-yellow-500">排队中...</span></p>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">任务进度</h3>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600 mt-2">
+                    <span id="progressText">等待任务开始...</span>
+                    <span>已用时间: <strong id="elapsedTime">00:00:00</strong> / 预计剩余: <span id="etaTime">--:--:--</span></span>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-2 text-gray-700">生成内容</h3>
+                <div id="markdown-container" class="border border-gray-300 rounded-md p-4 h-64 overflow-y-auto bg-gray-50 markdown-content">
+                    <p class="text-gray-500 italic">正在生成，请稍候...</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-2 text-gray-700">执行日志</h3>
+                <div id="logContainer" class="border border-gray-300 rounded-md p-4 h-48 overflow-y-auto bg-black text-white font-mono text-sm">
+                    等待日志开始...
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="/" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center">
+                    开始新任务
+                </a>
+                <button id="download-btn" class="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors text-center" disabled>
+                    下载文档
+                </button>
+                <button id="copy-btn" class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors text-center" disabled>
+                    复制内容
+                </button>
+            </div>
+        </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const taskId = '{{ task_id }}';
+
+        // --- UI 元素 ---
+        const statusElement = document.getElementById('status');
+        const logContainer = document.getElementById('logContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const elapsedTimeElement = document.getElementById('elapsedTime');
+        const etaTimeElement = document.getElementById('etaTime');
+        const copyBtn = document.getElementById('copy-btn');
+        const downloadBtn = document.getElementById('download-btn');
+        const markdownContainer = document.getElementById('markdown-container');
+
+        // --- 状态变量 ---
+        let startTime = null;
+        let timerInterval = null;
+        let statusCheckInterval;
+
+        // --- [核心修改] 引入更详细的进度计算配置 ---
+        const progressConfig = {
+            base: { // 非循环步骤的基准进度
+                style_guide_node: 5,
+                plan_node: 15,
+                draft_node: 30,
+                polish_node: 95,
+                memory_node: 99,
+            },
+            loop: { // 定义循环部分的进度范围和步骤
+                startPercent: 30,
+                endPercent: 95,
+                // 注意：这里的节点顺序必须与实际工作流中的循环顺序一致
+                nodes: ['critique_node', 'research_node', 'refine_node', 'apply_patches_node']
+            }
+        };
+
+        // --- 辅助函数 ---
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds < 0) seconds = 0;
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+            const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function updateTimers() {
+            if (!startTime) return;
+            const elapsed = (Date.now() - startTime) / 1000;
+            elapsedTimeElement.textContent = formatTime(elapsed);
+        }
+        
+        // --- [核心修改] 新的、更平滑的进度计算函数 ---
+        function calculateProgress(logData) {
+            const { node, iteration, total_iterations } = logData;
+
+            // 检查是否为非循环的基准步骤
+            if (progressConfig.base.hasOwnProperty(node) && (progressConfig.base[node] <= progressConfig.loop.startPercent || progressConfig.base[node] >= progressConfig.loop.endPercent)) {
+                return progressConfig.base[node];
+            }
+
+            // --- 计算循环内的平滑进度 ---
+            const loopRange = progressConfig.loop.endPercent - progressConfig.loop.startPercent;
+            const percentPerIteration = loopRange / total_iterations;
+            const nodeStep = progressConfig.loop.nodes.indexOf(node);
+
+            // 如果节点不在预定义的循环步骤中，则返回当前迭代的基础进度
+            if (nodeStep === -1) {
+                return progressConfig.loop.startPercent + ((iteration - 1) * percentPerIteration);
+            }
+            
+            const percentPerNodeInLoop = percentPerIteration / progressConfig.loop.nodes.length;
+            
+            const progress = progressConfig.loop.startPercent +
+                             ((iteration - 1) * percentPerIteration) +
+                             (nodeStep * percentPerNodeInLoop);
+
+            return Math.min(progress, progressConfig.loop.endPercent);
+        }
+
+
+        function fetchFinalResult() {
+            fetch(`/api/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === '已完成' && data.result) {
+                        markdownContainer.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${data.result}</pre>`;
+                        copyBtn.disabled = false;
+                        downloadBtn.disabled = false;
+                    } else if (data.status === '失败') {
+                        markdownContainer.innerHTML = `<p class="text-red-500">任务失败: ${data.result}</p>`;
+                    }
+                })
+                .catch(err => {
+                    console.error('获取最终结果时出错:', err);
+                    markdownContainer.innerHTML = `<p class="text-red-500">获取结果失败。</p>`;
+                });
+        }
+
+        function handleCompletion(status) {
+            statusElement.textContent = status;
+            statusElement.className = status === '已完成' ? 'text-green-600' : 'text-red-600';
+            etaTimeElement.textContent = '00:00:00';
+            if (status === '已完成') {
+                progressBar.style.width = '100%';
+                progressText.textContent = "任务完成";
+            }
+            if (timerInterval) clearInterval(timerInterval);
+            fetchFinalResult();
+        }
+
+        // --- SSE 连接 ---
+        const eventSource = new EventSource(`/api/log_stream?task_id=${taskId}`);
+
+        eventSource.onmessage = function(event) {
+            const data = event.data;
+
+            if (!startTime) {
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimers, 1000);
+                statusElement.textContent = '运行中';
+                statusElement.className = 'text-blue-600';
+                logContainer.innerHTML = '';
+            }
+            
+            try {
+                const logData = JSON.parse(data);
+
+                if (logData.type === 'progress') {
+                    // [核心修改] 调用新的进度计算函数
+                    const currentProgress = calculateProgress(logData);
+                    const { iteration, total_iterations, step_name } = logData;
+
+                    progressBar.style.width = `${currentProgress}%`;
+                    progressText.textContent = `${step_name} (迭代 ${iteration}/${total_iterations})`;
+
+                    const elapsed = (Date.now() - startTime) / 1000;
+                    // 使用一个稍高的阈值(>1%)来确保ETA计算的稳定性
+                    if (currentProgress > 1 && currentProgress < 100) {
+                        const eta = (elapsed / currentProgress) * (100 - currentProgress);
+                        etaTimeElement.textContent = formatTime(eta);
+                    }
+                    
+                    const logEntry = document.createElement('div');
+                    logEntry.textContent = `[PROGRESS] ${logData.message}`;
+                    logContainer.appendChild(logEntry);
+                    logContainer.scrollTop = logContainer.scrollHeight;
+
+                }
+            } catch (e) {
+                // 如果不是JSON，就当作普通日志处理
+                const logEntry = document.createElement('div');
+                logEntry.textContent = data;
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+        };
+
+        eventSource.onerror = function(error) {
+            console.error('EventSource 错误:', error);
+            statusElement.textContent = '连接错误';
+            statusElement.className = 'text-red-600';
+            if (timerInterval) clearInterval(timerInterval);
+            if (statusCheckInterval) clearInterval(statusCheckInterval);
+            eventSource.close();
+        };
+
+        // --- 定期检查任务状态 ---
+        statusCheckInterval = setInterval(() => {
+            fetch(`/api/task_status/${taskId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === '已完成' || data.status === '失败') {
+                        handleCompletion(data.status);
+                        eventSource.close();
+                        clearInterval(statusCheckInterval);
+                    }
+                });
+        }, 3000);
+
+        // --- 按钮事件监听器 ---
+        copyBtn.addEventListener('click', function() {
+            navigator.clipboard.writeText(markdownContainer.innerText)
+                .then(() => alert('内容已复制到剪贴板'))
+                .catch(err => console.error('复制失败:', err));
+        });
+
+        downloadBtn.addEventListener('click', function() {
+            const content = markdownContainer.innerText;
+            const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `result_${taskId}.md`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    });
+</script>
+    </main>
+
+    <footer class="bg-gray-800 text-white p-4 mt-auto">
+        <div class="container mx-auto text-center">
+            <p>智能AI长文写作框架 &copy; 2025</p>
+        </div>
+    </footer>
+</body>
+</html>

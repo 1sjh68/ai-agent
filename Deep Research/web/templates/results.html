@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>写作结果 - 智能AI长文写作框架</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <nav class="bg-blue-600 text-white p-4 shadow-md">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">智能AI长文写作框架</h1>
+            <div class="space-x-4">
+                <a href="/" class="hover:text-blue-200">首页</a>
+                <a href="/configure" class="hover:text-blue-200">配置</a>
+                <a href="/toolkit" class="hover:text-blue-200">开发者工具箱</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="flex-grow container mx-auto p-4">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6 mt-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">写作结果</h2>
+            
+            <div class="mb-4 p-4 bg-blue-50 rounded-md">
+                <p class="text-gray-700"><strong>任务ID:</strong> {{ task_id }}</p>
+                <p class="text-gray-700"><strong>状态:</strong> <span id="status" class="text-yellow-500">排队中...</span></p>
+            </div>
+
+            <!-- [NEW] Progress Display -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">任务进度</h3>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600 mt-2">
+                    <span id="progressText">等待任务开始...</span>
+                    <span>已用时间: <strong id="elapsedTime">00:00:00</strong> / 预计剩余: <span id="etaTime">--:--:--</span></span>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-2 text-gray-700">生成内容</h3>
+                <div class="border border-gray-300 rounded-md p-4 h-64 overflow-y-auto bg-gray-50 markdown-content">
+                    <!-- 这里将显示生成的Markdown内容 -->
+                    <p class="text-gray-500 italic">加载中...</p>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-2 text-gray-700">执行日志</h3>
+                <div id="logContainer" class="border border-gray-300 rounded-md p-4 h-48 overflow-y-auto bg-black text-white font-mono text-sm">
+                    等待日志开始...
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-4">
+                <a href="/" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center">
+                    开始新任务
+                </a>
+                <button id="download-btn" class="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors text-center">
+                    下载文档
+                </button>
+                <button id="copy-btn" class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors text-center">
+                    复制内容
+                </button>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const taskId = '{{ task_id }}';
+                const statusElement = document.getElementById('status');
+                const logContainer = document.getElementById('logContainer');
+                const copyBtn = document.getElementById('copy-btn');
+
+                // 连接SSE端点
+                const eventSource = new EventSource(`/api/log_stream?task_id=${taskId}`);
+
+                // 处理接收到的消息
+                eventSource.onmessage = function(event) {
+                    const data = event.data;
+                    console.log('Received:', data);
+
+                    // 更新日志
+                    if (data.startsWith('[任务完成]')) {
+                        // 任务完成，更新状态
+                        statusElement.textContent = '已完成';
+                        statusElement.className = 'text-green-600';
+                        eventSource.close();
+                    } else if (data.startsWith('任务状态: ')) {
+                        // 更新状态
+                        const status = data.replace('任务状态: ', '');
+                        statusElement.textContent = status;
+                        if (status === '已完成') {
+                            statusElement.className = 'text-green-600';
+                        } else if (status.startsWith('失败')) {
+                            statusElement.className = 'text-red-600';
+                        }
+                    } else {
+                        // 添加日志行
+                        const logEntry = document.createElement('div');
+                        logEntry.textContent = data;
+                        logContainer.appendChild(logEntry);
+                        logContainer.scrollTop = logContainer.scrollHeight;
+                    }
+                };
+
+                // 处理错误
+                eventSource.onerror = function(error) {
+                    console.error('EventSource error:', error);
+                    eventSource.close();
+                };
+
+                // 复制按钮功能
+                copyBtn.addEventListener('click', function() {
+                    const content = document.querySelector('.markdown-content').innerText;
+                    navigator.clipboard.writeText(content)
+                        .then(() => alert('内容已复制到剪贴板'))
+                        .catch(err => console.error('复制失败:', err));
+                });
+
+                // 下载按钮事件
+                document.getElementById('download-btn').addEventListener('click', function() {
+                    alert('文档下载功能将在完整实现中提供');
+                });
+            });
+        </script>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white p-4 mt-auto">
+        <div class="container mx-auto text-center">
+            <p>智能AI长文写作框架 &copy; 2025</p>
+        </div>
+    </footer>
+
+    <script>
+        // 模拟加载生成内容
+        document.addEventListener('DOMContentLoaded', function() {
+            // 实际应用中，这里应该通过API获取真实内容
+            setTimeout(function() {
+                document.querySelector('.markdown-content').innerHTML = '<h2>示例生成内容</h2><p>这是一个AI生成的文档示例。在实际应用中，这里将显示根据您的主题生成的完整内容。</p>';
+            }, 1000);
+
+            // 下载按钮事件
+            document.getElementById('download-btn').addEventListener('click', function() {
+                alert('文档下载功能将在完整实现中提供');
+            });
+
+            // 复制按钮事件
+            document.getElementById('copy-btn').addEventListener('click', function() {
+                alert('内容复制功能将在完整实现中提供');
+            });
+        });
+    </script>
+</body>
+</html>

@@ -8,13 +8,13 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    <nav class="bg-blue-600 text-white p-4 shadow-md">
+    <nav class="bg-slate-700 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold">智能AI长文写作框架</h1>
             <div class="space-x-4">
-                <a href="/" class="hover:text-blue-200">首页</a>
-                <a href="/configure" class="hover:text-blue-200">配置</a>
-                <a href="/toolkit" class="hover:text-blue-200">开发者工具箱</a>
+                <a href="/" class="hover:text-slate-300">首页</a>
+                <a href="/configure" class="hover:text-slate-300">配置</a>
+                <a href="/toolkit" class="hover:text-slate-300">开发者工具箱</a>
             </div>
         </div>
     </nav>
@@ -25,25 +25,30 @@
             <form action="/submit_task" method="post" enctype="multipart/form-data">
                 <div class="mb-4">
                     <label for="user_problem" class="block text-gray-700 mb-2">写作主题</label>
-                    <textarea id="user_problem" name="user_problem" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="请输入您想要写作的主题..." required></textarea>
+                    <textarea id="user_problem" name="user_problem" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500" placeholder="请输入您想要写作的主题..." required></textarea>
                 </div>
                 <div class="mb-4">
                     <label for="external_files" class="block text-gray-700 mb-2">外部参考文件 (可选, 可多选)</label>
-                    <input type="file" id="external_files" name="external_files" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    <input type="file" id="external_files" name="external_files" multiple class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100">
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                     <div>
                         <label for="target_length" class="block text-gray-700 mb-2">目标长度 (字符)</label>
-                        <input type="number" id="target_length" name="target_length" value="{{ default_target_chars }}" min="1000" max="100000" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="number" id="target_length" name="target_length" value="{{ default_target_chars }}" min="1000" max="100000" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500">
                     </div>
                     <div>
                         <label for="max_iterations" class="block text-gray-700 mb-2">最大迭代次数</label>
-                        <input type="number" id="max_iterations" name="max_iterations" value="{{ default_iterations }}" min="1" max="10" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="number" id="max_iterations" name="max_iterations" value="{{ default_iterations }}" min="1" max="10" class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-500">
                     </div>
                 </div>
 
-                <button type="submit" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors w-full">开始写作</button>
+                <button type="submit" class="bg-slate-700 text-white py-2 px-4 rounded-md hover:bg-slate-800 transition-colors w-full flex items-center justify-center">
+                    <span>开始写作</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 ml-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
             </form>
         </div>
     </main>

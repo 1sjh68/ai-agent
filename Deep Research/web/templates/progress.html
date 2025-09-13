@@ -6,15 +6,18 @@
     <title>写作结果 - 智能AI长文写作框架</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
-    <nav class="bg-blue-600 text-white p-4 shadow-md">
+    <nav class="bg-slate-700 text-white p-4 shadow-md">
         <div class="container mx-auto flex justify-between items-center">
             <h1 class="text-2xl font-bold">智能AI长文写作框架</h1>
             <div class="space-x-4">
-                <a href="/" class="hover:text-blue-200">首页</a>
-                <a href="/configure" class="hover:text-blue-200">配置</a>
-                <a href="/toolkit" class="hover:text-blue-200">开发者工具箱</a>
+                <a href="/" class="hover:text-slate-300">首页</a>
+                <a href="/configure" class="hover:text-slate-300">配置</a>
+                <a href="/toolkit" class="hover:text-slate-300">开发者工具箱</a>
             </div>
         </div>
     </nav>
@@ -23,7 +26,7 @@
         <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6 mt-8">
             <h2 class="text-xl font-semibold mb-4 text-gray-800">写作结果</h2>
 
-            <div class="mb-4 p-4 bg-blue-50 rounded-md">
+            <div class="mb-4 p-4 bg-slate-50 rounded-md">
                 <p class="text-gray-700"><strong>任务ID:</strong> {{ task_id }}</p>
                 <p class="text-gray-700"><strong>状态:</strong> <span id="status" class="text-yellow-500">排队中...</span></p>
             </div>
@@ -31,7 +34,7 @@
             <div class="mb-6">
                 <h3 class="text-lg font-medium mb-3 text-gray-700">任务进度</h3>
                 <div class="w-full bg-gray-200 rounded-full h-2.5">
-                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    <div id="progressBar" class="bg-slate-600 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
                 </div>
                 <div class="flex justify-between text-sm text-gray-600 mt-2">
                     <span id="progressText">等待任务开始...</span>
@@ -54,14 +57,17 @@
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4">
-                <a href="/" class="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors text-center">
-                    开始新任务
+                <a href="/" class="bg-slate-700 text-white py-2 px-4 rounded-md hover:bg-slate-800 transition-colors text-center flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" /></svg>
+                    <span>开始新任务</span>
                 </a>
-                <button id="download-btn" class="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors text-center" disabled>
-                    下载文档
+                <button id="download-btn" class="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors text-center flex items-center justify-center" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                    <span>下载文档</span>
                 </button>
-                <button id="copy-btn" class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors text-center" disabled>
-                    复制内容
+                <button id="copy-btn" class="bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors text-center flex items-center justify-center" disabled>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" /><path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" /></svg>
+                    <span>复制内容</span>
                 </button>
             </div>
         </div>
@@ -85,6 +91,7 @@
         let startTime = null;
         let timerInterval = null;
         let statusCheckInterval;
+        let rawMarkdownContent = ''; // For downloading
 
         // --- [核心修改] 引入更详细的进度计算配置 ---
         const progressConfig = {
@@ -152,7 +159,11 @@
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === '已完成' && data.result) {
-                        markdownContainer.innerHTML = `<pre style="white-space: pre-wrap; word-wrap: break-word;">${data.result}</pre>`;
+                        rawMarkdownContent = data.result;
+                        markdownContainer.innerHTML = marked.parse(rawMarkdownContent);
+                        document.querySelectorAll('pre code').forEach((block) => {
+                            hljs.highlightElement(block);
+                        });
                         copyBtn.disabled = false;
                         downloadBtn.disabled = false;
                     } else if (data.status === '失败') {
@@ -167,7 +178,7 @@
 
         function handleCompletion(status) {
             statusElement.textContent = status;
-            statusElement.className = status === '已完成' ? 'text-green-600' : 'text-red-600';
+.            statusElement.className = status === '已完成' ? 'text-green-600' : 'text-red-600';
             etaTimeElement.textContent = '00:00:00';
             if (status === '已完成') {
                 progressBar.style.width = '100%';
@@ -187,7 +198,7 @@
                 startTime = Date.now();
                 timerInterval = setInterval(updateTimers, 1000);
                 statusElement.textContent = '运行中';
-                statusElement.className = 'text-blue-600';
+                statusElement.className = 'text-slate-600';
                 logContainer.innerHTML = '';
             }
             
@@ -218,7 +229,7 @@
             } catch (e) {
                 // 如果不是JSON，就当作普通日志处理
                 const logEntry = document.createElement('div');
-                logEntry.textContent = data;
+.                logEntry.textContent = data;
                 logContainer.appendChild(logEntry);
                 logContainer.scrollTop = logContainer.scrollHeight;
             }
@@ -254,7 +265,7 @@
         });
 
         downloadBtn.addEventListener('click', function() {
-            const content = markdownContainer.innerText;
+            const content = rawMarkdownContent;
             const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
